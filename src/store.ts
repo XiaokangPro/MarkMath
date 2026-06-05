@@ -1,19 +1,41 @@
-import { Card } from './types';
+import { Card, CardPack } from './types';
 
-const STORAGE_KEY = 'markmath-cards';
+const PACKS_KEY = 'markmath-packs';
+const OLD_CARDS_KEY = 'markmath-cards';
 
-export function loadCards(): Card[] {
-  const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) return [];
-  try {
-    return JSON.parse(data);
-  } catch {
-    return [];
+export function loadPacks(): CardPack[] {
+  const data = localStorage.getItem(PACKS_KEY);
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
   }
+  const oldData = localStorage.getItem(OLD_CARDS_KEY);
+  if (oldData) {
+    try {
+      const cards: Card[] = JSON.parse(oldData);
+      if (cards.length > 0) {
+        const pack: CardPack = {
+          id: generateId(),
+          title: '我的卡包',
+          cards,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        const packs = [pack];
+        savePacks(packs);
+        localStorage.removeItem(OLD_CARDS_KEY);
+        return packs;
+      }
+    } catch {}
+  }
+  return [];
 }
 
-export function saveCards(cards: Card[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+export function savePacks(packs: CardPack[]): void {
+  localStorage.setItem(PACKS_KEY, JSON.stringify(packs));
 }
 
 export function generateId(): string {

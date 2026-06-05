@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import html2canvas from 'html2canvas';
@@ -10,10 +10,9 @@ import { BlockContainer } from './BlockContainer';
 interface Props {
   card: Card;
   onSave: (card: Card) => void;
-  onBack: () => void;
 }
 
-export function CardEditor({ card, onSave, onBack }: Props) {
+export function CardEditor({ card, onSave }: Props) {
   const [blocks, setBlocks] = useState<Block[]>(card.blocks);
   const [isEditing, setIsEditing] = useState(true);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
@@ -84,6 +83,13 @@ export function CardEditor({ card, onSave, onBack }: Props) {
     });
   }, [card, onSave]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSave();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [blocks, handleSave]);
+
   const saveAsImage = async () => {
     if (!previewRef.current) return;
     setSaving(true);
@@ -106,12 +112,6 @@ export function CardEditor({ card, onSave, onBack }: Props) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-3 bg-white border-b border-gray-200">
-        <button
-          className="text-blue-500 hover:text-blue-700"
-          onClick={() => { handleSave(); onBack(); }}
-        >
-          ← 返回
-        </button>
         <div className="flex gap-2">
           <button
             className={`px-3 py-1 rounded text-sm ${

@@ -52,6 +52,14 @@ export interface Card {
   updatedAt: number;
 }
 
+export interface CardPack {
+  id: string;
+  title: string;
+  cards: Card[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export const CLOZE_COLORS = ['#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0'];
 export const FONT_COLORS = ['#333333', '#E91E63', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#795548'];
 export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32];
