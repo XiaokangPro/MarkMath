@@ -65,20 +65,33 @@ export function ImageBlock({ block, isEditing, onUpdate, onFocus }: Props) {
           />
         </div>
       )}
-      <img
-        src={block.dataUrl}
-        alt={block.caption || ''}
-        className="max-w-full rounded-lg"
-      />
-      {isEditing && (
-        <input
-          type="text"
-          placeholder="图片描述（可选）"
-          value={block.caption || ''}
-          onChange={(e) => onUpdate({ ...block, caption: e.target.value })}
-          className="mt-2 w-full px-2 py-1 text-sm border border-gray-200 rounded"
+      <div className="relative group/img">
+        <img
+          src={block.dataUrl}
+          alt={block.caption || ''}
+          className="max-w-full rounded-lg"
         />
-      )}
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg cursor-pointer"
+          onClick={() => inputRef.current?.click()}
+        >
+          <span className="text-white text-sm bg-black/50 px-3 py-1.5 rounded-full">替换图片</span>
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </div>
+      <input
+        type="text"
+        placeholder="图片描述（可选）"
+        value={block.caption || ''}
+        onChange={(e) => onUpdate({ ...block, caption: e.target.value })}
+        className="mt-2 w-full px-2 py-1 text-sm border border-gray-200 rounded"
+      />
     </div>
   );
 }

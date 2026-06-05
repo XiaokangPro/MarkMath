@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import { Card, Block, BlockType, TextBlock } from '../types';
 import { generateId } from '../store';
 import { Toolbar } from './Toolbar';
@@ -18,6 +19,7 @@ export function CardEditor({ card, onSave }: Props) {
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [showBlockMenu, setShowBlockMenu] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const blocksRef = useRef(blocks);
   const previewRef = useRef<HTMLDivElement>(null);
   blocksRef.current = blocks;
@@ -138,20 +140,61 @@ export function CardEditor({ card, onSave }: Props) {
     return () => clearTimeout(timer);
   }, [blocks, handleSave]);
 
+  const captureFullContent = async (): Promise<string> => {
+    const el = previewRef.current!;
+    const prevOverflow = el.style.overflow;
+    const prevHeight = el.style.height;
+    const prevMaxHeight = el.style.maxHeight;
+    const prevFlex = el.style.flex;
+    el.style.overflow = 'visible';
+    el.style.height = 'auto';
+    el.style.maxHeight = 'none';
+    el.style.flex = 'none';
+    try {
+      const dataUrl = await toPng(el, { backgroundColor: '#ffffff', pixelRatio: 2 });
+      return dataUrl;
+    } finally {
+      el.style.overflow = prevOverflow;
+      el.style.height = prevHeight;
+      el.style.maxHeight = prevMaxHeight;
+      el.style.flex = prevFlex;
+    }
+  };
+
   const saveAsImage = async () => {
     if (!previewRef.current) return;
     setSaving(true);
+    setShowExportMenu(false);
     try {
-      const dataUrl = await toPng(previewRef.current, {
-        backgroundColor: '#ffffff',
-        pixelRatio: 2,
-      });
+      const dataUrl = await captureFullContent();
       const link = document.createElement('a');
       link.download = `${card.title || '卡片'}_${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
     } catch (e) {
       console.error('Save image failed:', e);
+    }
+    setSaving(false);
+  };
+
+  const saveAsPdf = async () => {
+    if (!previewRef.current) return;
+    setSaving(true);
+    setShowExportMenu(false);
+    try {
+      const dataUrl = await captureFullContent();
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => { img.onload = resolve; });
+      const imgWidth = img.width;
+      const imgHeight = img.height;
+      const pdfWidth = 210;
+      const pdfHeight = (imgHeight / imgWidth) * pdfWidth;
+      const pdf = new jsPDF({ orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape', unit: 'mm', format: [pdfWidth, pdfHeight] });
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${card.title || '卡片'}_${Date.now()}.pdf`);
+    } catch (e) {
+      console.error('Save PDF failed:', e);
     }
     setSaving(false);
   };
@@ -179,13 +222,34 @@ export function CardEditor({ card, onSave }: Props) {
         </div>
         <div className="flex items-center gap-2">
           {!isEditing && (
-            <button
-              className="text-sm text-blue-500 hover:text-blue-700 disabled:opacity-50"
-              onClick={saveAsImage}
-              disabled={saving}
-            >
-              {saving ? '保存中...' : '保存图片'}
-            </button>
+            <div className="relative">
+              <button
+                className="text-sm text-blue-500 hover:text-blue-700 disabled:opacity-50"
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                disabled={saving}
+              >
+                {saving ? '导出中...' : '导出 ▾'}
+              </button>
+              {showExportMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-20 w-[120px]">
+                    <button
+                      className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={saveAsImage}
+                    >
+                      保存图片
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={saveAsPdf}
+                    >
+                      保存 PDF
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
           <button
             className="text-green-500 hover:text-green-700 font-medium text-sm"

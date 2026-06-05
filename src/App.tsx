@@ -55,14 +55,7 @@ function App() {
   };
 
   const handleSaveCard = useCallback((updated: Card) => {
-    const titleBlock = updated.blocks.find((b) => b.type === 'text');
-    let title = updated.title;
-    if (!title && titleBlock && titleBlock.type === 'text') {
-      const temp = document.createElement('div');
-      temp.innerHTML = titleBlock.content;
-      title = (temp.textContent || '').slice(0, 30) || '未命名卡片';
-    }
-    const savedCard = { ...updated, title };
+    const savedCard = { ...updated };
 
     setPacks((prev) =>
       prev.map((p) => {
@@ -127,6 +120,29 @@ function App() {
     );
   };
 
+  const handleCardTitleChange = (title: string) => {
+    if (!activePack) return;
+    setPacks((prev) =>
+      prev.map((p) => {
+        if (p.id !== activePack.id) return p;
+        const newCards = p.cards.map((c, i) =>
+          i === activeCardIndex ? { ...c, title, updatedAt: Date.now() } : c
+        );
+        const updatedPack = { ...p, cards: newCards, updatedAt: Date.now() };
+        setActivePack(updatedPack);
+        return updatedPack;
+      })
+    );
+  };
+
+  const handleJumpToCard = (packId: string, cardIndex: number) => {
+    const pack = packs.find((p) => p.id === packId);
+    if (pack) {
+      setActivePack(pack);
+      setActiveCardIndex(cardIndex);
+    }
+  };
+
   if (activePack) {
     const currentCard = activePack.cards[activeCardIndex];
     const totalCards = activePack.cards.length;
@@ -140,13 +156,30 @@ function App() {
           >
             ← 返回
           </button>
-          <input
-            type="text"
-            className="flex-1 text-sm font-medium border-none outline-none bg-transparent"
-            placeholder="卡包名称..."
-            value={activePack.title}
-            onChange={(e) => handlePackTitleChange(e.target.value)}
-          />
+          <div className="relative inline-grid items-center min-w-[40px]">
+            <span className="invisible whitespace-pre text-sm font-medium px-0 col-start-1 row-start-1">
+              {activePack.title || '卡包名称...'}
+            </span>
+            <input
+              type="text"
+              className="col-start-1 row-start-1 text-sm font-medium border-none outline-none bg-transparent w-full"
+              placeholder="卡包名称..."
+              value={activePack.title}
+              onChange={(e) => handlePackTitleChange(e.target.value)}
+            />
+          </div>
+          <div className="shrink-0 ml-auto">
+            <div className="inline-flex items-center bg-gray-100 border border-gray-200 rounded-full px-2 py-px relative">
+              <span className="text-xs whitespace-pre invisible">{currentCard.title || '命名'}</span>
+              <input
+                type="text"
+                className="absolute inset-0 text-xs text-gray-500 bg-transparent border-none outline-none rounded-full px-2 py-px focus:text-gray-700 w-full text-center"
+                placeholder="命名"
+                value={currentCard.title}
+                onChange={(e) => handleCardTitleChange(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="flex-1 overflow-hidden">
@@ -205,6 +238,7 @@ function App() {
         onSelect={handleSelectPack}
         onDelete={handleDeletePack}
         onNew={createNewPack}
+        onJumpToCard={handleJumpToCard}
       />
     </div>
   );

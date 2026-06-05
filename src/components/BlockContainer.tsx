@@ -169,7 +169,7 @@ export function BlockContainer({ block, isEditing, onUpdate, onDelete, onAddBefo
     <div
       ref={setNodeRef}
       style={style}
-      className={`block-container rounded-lg mb-2 relative group ${isEditing ? 'bg-white border border-gray-100 p-3' : 'px-4 py-4'}`}
+      className={`block-container rounded-lg mb-2 relative group ${isEditing ? 'bg-white border border-gray-100 p-3' : block.type === 'image' ? 'px-4 py-0' : 'px-4 py-4'}`}
       onClick={isEditing ? onFocus : undefined}
     >
       {isEditing && (
