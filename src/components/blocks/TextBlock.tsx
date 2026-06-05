@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import twemoji from 'twemoji';
 import { TextBlock as TextBlockType } from '../../types';
 
 interface Props {
@@ -125,6 +126,24 @@ function renderLatex(container: HTMLElement) {
   });
 }
 
+function parseEmoji(container: HTMLElement) {
+  twemoji.parse(container, {
+    base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/',
+    folder: 'svg',
+    ext: '.svg',
+  });
+  container.querySelectorAll('img.emoji').forEach(async (img) => {
+    const src = (img as HTMLImageElement).src;
+    if (!src || src.startsWith('data:')) return;
+    try {
+      const resp = await fetch(src);
+      const text = await resp.text();
+      const dataUri = 'data:image/svg+xml;base64,' + btoa(text);
+      (img as HTMLImageElement).src = dataUri;
+    } catch {}
+  });
+}
+
 function RenderedContent({ html, className }: { html: string; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -132,6 +151,7 @@ function RenderedContent({ html, className }: { html: string; className?: string
     if (!ref.current) return;
     ref.current.innerHTML = html;
     renderLatex(ref.current);
+    parseEmoji(ref.current);
   }, [html]);
 
   return <div ref={ref} className={className} />;
@@ -158,6 +178,8 @@ function ClozeContent({ html }: { html: string }) {
         htmlEl.classList.toggle('revealed');
       };
     });
+
+    parseEmoji(containerRef.current);
   }, [html]);
 
   return <div ref={containerRef} />;

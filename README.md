@@ -23,7 +23,7 @@
 - 字体颜色 / 下划线颜色（右键选色）
 - 自定义颜色持久化，常用色快捷选取
 - LaTeX 公式插入（KaTeX 渲染）
-- Emoji 表情面板
+- Emoji 表情面板（Twemoji 跨平台统一渲染）
 - 文本对齐（左对齐 / 居中）
 - 撤销操作（自定义 undo 栈）
 
@@ -48,6 +48,7 @@
 | 拖拽 | @dnd-kit/core + sortable |
 | 公式 | KaTeX |
 | 截图 | html-to-image |
+| Emoji | Twemoji（跨平台统一渲染） |
 | 存储 | localStorage |
 
 ## 项目结构
