@@ -33,6 +33,7 @@
 
 ### 其他
 - 拖拽排序（@dnd-kit）
+- 块操作菜单 — 点击六点图标弹出菜单，支持删除、在前/后加块、颜色、复制、拷贝、粘贴
 - 每个块可独立设置背景色（含自定义色持久化）
 - 预览模式一键导出为 PNG 图片（html-to-image，所见即所得）
 - 所有数据保存在 localStorage，刷新不丢失
@@ -63,7 +64,7 @@ src/
 │   ├── CardList.tsx         # 卡包列表页（PackList）
 │   ├── CardEditor.tsx       # 卡片编辑器（编辑/预览/导出）
 │   ├── Toolbar.tsx          # 富文本格式工具栏
-│   ├── BlockContainer.tsx   # 块容器（拖拽、背景色、删除）
+│   ├── BlockContainer.tsx   # 块容器（拖拽、操作菜单、背景色）
 │   └── blocks/
 │       ├── TextBlock.tsx    # 文字块（contentEditable）
 │       ├── ImageBlock.tsx   # 图片块（支持双面）

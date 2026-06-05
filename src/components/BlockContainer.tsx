@@ -32,11 +32,16 @@ interface Props {
   isEditing: boolean;
   onUpdate: (block: Block) => void;
   onDelete: (id: string) => void;
+  onAddBefore: (id: string) => void;
+  onAddAfter: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onPasteBlock: (id: string, blockData: Block) => void;
   onFocus: () => void;
 }
 
-export function BlockContainer({ block, isEditing, onUpdate, onDelete, onFocus }: Props) {
-  const [showBgPicker, setShowBgPicker] = useState(false);
+export function BlockContainer({ block, isEditing, onUpdate, onDelete, onAddBefore, onAddAfter, onDuplicate, onPasteBlock, onFocus }: Props) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [showColorSub, setShowColorSub] = useState(false);
   const [customBgColors, setCustomBgColors] = useState<string[]>(loadCustomBgColors);
   const [customBgInput, setCustomBgInput] = useState('#FFFDE7');
   const {
@@ -56,17 +61,10 @@ export function BlockContainer({ block, isEditing, onUpdate, onDelete, onFocus }
     backgroundColor: block.bgColor && block.bgColor !== 'transparent' ? block.bgColor : undefined,
   };
 
-  const blockTypeLabel: Record<string, string> = {
-    text: '文字',
-    image: '图片',
-    audio: '音频',
-    choice: '选项',
-    link: '链接',
-  };
-
   const applyBg = (color: string) => {
     onUpdate({ ...block, bgColor: color });
-    setShowBgPicker(false);
+    setShowColorSub(false);
+    setShowMenu(false);
   };
 
   const applyCustomBg = (color: string) => {
@@ -74,6 +72,98 @@ export function BlockContainer({ block, isEditing, onUpdate, onDelete, onFocus }
     setCustomBgColors(updated);
     applyBg(color);
   };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(block));
+    } catch {}
+    setShowMenu(false);
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const parsed = JSON.parse(text);
+      if (parsed && parsed.type) {
+        onPasteBlock(block.id, parsed);
+      }
+    } catch {}
+    setShowMenu(false);
+  };
+
+  const menuItems = [
+    {
+      label: '在此前加块',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          <line x1="4" y1="4" x2="20" y2="4"/>
+        </svg>
+      ),
+      action: () => { onAddBefore(block.id); setShowMenu(false); },
+    },
+    {
+      label: '在此后加块',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          <line x1="4" y1="20" x2="20" y2="20"/>
+        </svg>
+      ),
+      action: () => { onAddAfter(block.id); setShowMenu(false); },
+    },
+    {
+      label: '复制',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+        </svg>
+      ),
+      action: () => { onDuplicate(block.id); setShowMenu(false); },
+    },
+    {
+      label: '拷贝',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+          <rect x="8" y="2" width="8" height="4" rx="1"/>
+        </svg>
+      ),
+      action: handleCopy,
+    },
+    {
+      label: '粘贴',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+          <rect x="8" y="2" width="8" height="4" rx="1"/>
+          <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+        </svg>
+      ),
+      action: handlePaste,
+    },
+    {
+      label: '颜色',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+      ),
+      action: () => setShowColorSub(!showColorSub),
+      noClose: true,
+    },
+    {
+      label: '删除',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+        </svg>
+      ),
+      action: () => { onDelete(block.id); setShowMenu(false); },
+      danger: true,
+    },
+  ];
 
   return (
     <div
@@ -83,95 +173,97 @@ export function BlockContainer({ block, isEditing, onUpdate, onDelete, onFocus }
       onClick={isEditing ? onFocus : undefined}
     >
       {isEditing && (
-        <div className="absolute left-0 top-0 bottom-0 flex flex-col items-center justify-center pl-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute left-0 top-0 bottom-0 flex flex-col items-center justify-center pl-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
           <div
             {...attributes}
             {...listeners}
-            className="block-drag-handle p-1 text-gray-400"
-            title="拖拽排序"
+            className="block-drag-handle p-1 text-gray-400 cursor-grab"
+            title="拖拽排序 / 点击操作"
+            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); setShowColorSub(false); }}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="9" cy="6" r="2"/><circle cx="15" cy="6" r="2"/>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="9" cy="5" r="2"/><circle cx="15" cy="5" r="2"/>
               <circle cx="9" cy="12" r="2"/><circle cx="15" cy="12" r="2"/>
-              <circle cx="9" cy="18" r="2"/><circle cx="15" cy="18" r="2"/>
+              <circle cx="9" cy="19" r="2"/><circle cx="15" cy="19" r="2"/>
             </svg>
           </div>
-        </div>
-      )}
 
-      <div className={isEditing ? 'pl-4 relative min-h-[48px] flex items-center' : ''}>
-        {isEditing && (
-          <div className="absolute right-0 top-0 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <div className="relative">
-              <button
-                className="text-xs text-gray-400 hover:text-gray-600"
-                onClick={() => setShowBgPicker(!showBgPicker)}
-                title="背景色"
-              >
-                🎨
-              </button>
-              {showBgPicker && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowBgPicker(false)} />
-                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-20 w-[200px]">
+          {showMenu && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => { setShowMenu(false); setShowColorSub(false); }} />
+              <div className="absolute left-full top-0 ml-1 z-40 bg-[#FFFDF5] rounded-xl shadow-lg py-1.5 w-[140px] border border-[#F0EBE0]">
+                {menuItems.map((item) => (
+                  <button
+                    key={item.label}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors ${
+                      item.danger ? 'text-red-500 hover:bg-red-50' : 'text-gray-700 hover:bg-[#F5F0E8]'
+                    }`}
+                    onClick={(e) => { e.stopPropagation(); item.action(); }}
+                  >
+                    <span className="shrink-0">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+
+                {showColorSub && (
+                  <div className="px-3 py-2 border-t border-[#F0EBE0]">
                     <div className="flex gap-1 flex-wrap mb-2">
                       {BG_COLORS.map((color) => (
                         <button
                           key={color}
-                          className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+                          className="w-5 h-5 rounded border border-gray-300 hover:scale-110 transition-transform"
                           style={{ backgroundColor: color === 'transparent' ? '#fff' : color }}
-                          onClick={() => applyBg(color)}
+                          onClick={(e) => { e.stopPropagation(); applyBg(color); }}
                           title={color === 'transparent' ? '无背景' : color}
                         >
-                          {color === 'transparent' && <span className="text-xs text-gray-400">✕</span>}
+                          {color === 'transparent' && <span className="text-[10px] text-gray-400">✕</span>}
                         </button>
                       ))}
                     </div>
                     {customBgColors.length > 0 && (
-                      <div className="flex gap-1 flex-wrap mb-2 border-t border-gray-100 pt-2">
-                        <span className="text-[10px] text-gray-400 w-full">常用</span>
+                      <div className="flex gap-1 flex-wrap mb-2 border-t border-gray-100 pt-1">
+                        <span className="text-[9px] text-gray-400 w-full">常用</span>
                         {customBgColors.map((color) => (
                           <button
                             key={color}
-                            className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+                            className="w-5 h-5 rounded border border-gray-300 hover:scale-110 transition-transform"
                             style={{ backgroundColor: color }}
-                            onClick={() => applyBg(color)}
+                            onClick={(e) => { e.stopPropagation(); applyBg(color); }}
                           />
                         ))}
                       </div>
                     )}
-                    <div className="flex items-center gap-1 border-t border-gray-100 pt-2">
+                    <div className="flex items-center gap-1 border-t border-gray-100 pt-1">
                       <input
                         type="color"
                         value={customBgInput}
                         onChange={(e) => setCustomBgInput(e.target.value)}
-                        className="w-6 h-6 rounded border border-gray-200 cursor-pointer p-0"
+                        className="w-5 h-5 rounded border border-gray-200 cursor-pointer p-0"
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <input
                         type="text"
                         value={customBgInput}
                         onChange={(e) => setCustomBgInput(e.target.value)}
-                        className="flex-1 text-xs border border-gray-200 rounded px-1 py-0.5 w-[50px]"
+                        className="flex-1 text-xs border border-gray-200 rounded px-1 py-0.5 w-[40px]"
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <button
-                        className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded hover:bg-blue-600"
-                        onClick={() => applyCustomBg(customBgInput)}
+                        className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded hover:bg-blue-600"
+                        onClick={(e) => { e.stopPropagation(); applyCustomBg(customBgInput); }}
                       >
                         用
                       </button>
                     </div>
                   </div>
-                </>
-              )}
-            </div>
-            <button
-              className="text-xs text-red-400 hover:text-red-600"
-              onClick={() => onDelete(block.id)}
-            >
-              删除
-            </button>
-          </div>
-        )}
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className={isEditing ? 'pl-4 relative min-h-[48px] flex items-center' : ''}>
         <div className="w-full">
           <BlockRenderer block={block} isEditing={isEditing} onUpdate={onUpdate} onFocus={onFocus} />
         </div>

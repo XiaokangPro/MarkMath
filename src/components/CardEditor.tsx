@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { toPng } from 'html-to-image';
 import { Card, Block, BlockType, TextBlock } from '../types';
@@ -23,6 +23,10 @@ export function CardEditor({ card, onSave }: Props) {
   blocksRef.current = blocks;
 
   const activeBlock = blocks.find((b) => b.id === activeBlockId);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   const addBlock = (type: BlockType) => {
     let newBlock: Block;
@@ -56,6 +60,50 @@ export function CardEditor({ card, onSave }: Props) {
 
   const deleteBlock = useCallback((id: string) => {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
+  }, []);
+
+  const addBlockBefore = useCallback((id: string) => {
+    const newBlock: Block = { id: generateId(), type: 'text', content: '', isDoubleSided: false };
+    setBlocks((prev) => {
+      const idx = prev.findIndex((b) => b.id === id);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next.splice(idx, 0, newBlock);
+      return next;
+    });
+  }, []);
+
+  const addBlockAfter = useCallback((id: string) => {
+    const newBlock: Block = { id: generateId(), type: 'text', content: '', isDoubleSided: false };
+    setBlocks((prev) => {
+      const idx = prev.findIndex((b) => b.id === id);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next.splice(idx + 1, 0, newBlock);
+      return next;
+    });
+  }, []);
+
+  const duplicateBlock = useCallback((id: string) => {
+    setBlocks((prev) => {
+      const idx = prev.findIndex((b) => b.id === id);
+      if (idx === -1) return prev;
+      const clone = JSON.parse(JSON.stringify(prev[idx]));
+      clone.id = generateId();
+      const next = [...prev];
+      next.splice(idx + 1, 0, clone);
+      return next;
+    });
+  }, []);
+
+  const pasteBlockAfter = useCallback((id: string, blockData: Block) => {
+    setBlocks((prev) => {
+      const idx = prev.findIndex((b) => b.id === id);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next.splice(idx + 1, 0, { ...blockData, id: generateId() });
+      return next;
+    });
   }, []);
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -163,6 +211,7 @@ export function CardEditor({ card, onSave }: Props) {
         className={`flex-1 overflow-y-auto px-4 py-2 ${!isEditing ? 'bg-white' : ''}`}
       >
         <DndContext
+          sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
@@ -174,6 +223,10 @@ export function CardEditor({ card, onSave }: Props) {
                 isEditing={isEditing}
                 onUpdate={updateBlock}
                 onDelete={deleteBlock}
+                onAddBefore={addBlockBefore}
+                onAddAfter={addBlockAfter}
+                onDuplicate={duplicateBlock}
+                onPasteBlock={pasteBlockAfter}
                 onFocus={() => setActiveBlockId(block.id)}
               />
             ))}
