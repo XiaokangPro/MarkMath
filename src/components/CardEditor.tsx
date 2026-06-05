@@ -71,7 +71,7 @@ export function CardEditor({ card, onSave, onBack }: Props) {
   };
 
   const toggleDoubleSided = () => {
-    if (activeBlock && activeBlock.type === 'text') {
+    if (activeBlock && (activeBlock.type === 'text' || activeBlock.type === 'image')) {
       updateBlock({ ...activeBlock, isDoubleSided: !activeBlock.isDoubleSided });
     }
   };
@@ -152,7 +152,10 @@ export function CardEditor({ card, onSave, onBack }: Props) {
       {isEditing && (
         <Toolbar
           onToggleDoubleSided={toggleDoubleSided}
-          isDoubleSided={activeBlock?.type === 'text' ? (activeBlock as TextBlock).isDoubleSided : false}
+          isDoubleSided={
+            activeBlock?.type === 'text' ? (activeBlock as TextBlock).isDoubleSided :
+            activeBlock?.type === 'image' ? !!(activeBlock as any).isDoubleSided : false
+          }
         />
       )}
 

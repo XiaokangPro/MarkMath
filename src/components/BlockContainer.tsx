@@ -190,7 +190,7 @@ function BlockRenderer({ block, isEditing, onUpdate, onFocus }: {
     case 'text':
       return <TextBlock block={block} isEditing={isEditing} onUpdate={onUpdate} onFocus={onFocus} />;
     case 'image':
-      return <ImageBlock block={block} isEditing={isEditing} onUpdate={onUpdate as any} />;
+      return <ImageBlock block={block} isEditing={isEditing} onUpdate={onUpdate as any} onFocus={onFocus} />;
     case 'audio':
       return <AudioBlock block={block} isEditing={isEditing} onUpdate={onUpdate as any} />;
     case 'choice':

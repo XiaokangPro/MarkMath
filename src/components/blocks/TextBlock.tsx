@@ -85,14 +85,15 @@ function TextBlockViewer({ block }: { block: TextBlockType }) {
   if (block.isDoubleSided) {
     return (
       <div
-        className="w-full cursor-pointer select-none"
+        className="w-full cursor-pointer select-none relative"
         onClick={() => setShowFront(!showFront)}
       >
-        {showFront ? (
+        <div className={showFront ? '' : 'invisible'}>
           <RenderedContent html={block.content} />
-        ) : (
-          <div className="double-sided-back">
-            <RenderedContent html={block.backContent || ''} className="text-sm" />
+        </div>
+        {!showFront && (
+          <div className="absolute -inset-x-4 -inset-y-3 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
+            <RenderedContent html={block.backContent || ''} />
           </div>
         )}
       </div>
