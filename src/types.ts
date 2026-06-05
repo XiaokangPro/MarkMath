@@ -60,10 +60,10 @@ export interface CardPack {
   updatedAt: number;
 }
 
-export const CLOZE_COLORS = ['#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0'];
-export const FONT_COLORS = ['#333333', '#E91E63', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#795548'];
+export const CLOZE_COLORS = ['#8C8E54', '#73A0CD', '#E1655D', '#E5B75A', '#9891AE'];
+export const FONT_COLORS = ['#F9F0D8', '#ECEA8D', '#8C8E54', '#E5B75A', '#E1655D', '#6D7A96', '#73A0CD', '#9891AE', '#4E4549', '#302E29', '#FFFFFF', '#EDE9E1', '#C3E6D5', '#EAE4B3', '#EAC0A4', '#A1AFC3', '#AED0F0', '#D2CEE0', '#DED3C6', '#D5D5D5'];
 export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32];
-export const BG_COLORS = ['transparent', '#FFF9C4', '#E3F2FD', '#E8F5E9', '#FCE4EC', '#F3E5F5', '#FBE9E7', '#E0F7FA'];
+export const BG_COLORS = ['transparent', '#F9F0D8', '#ECEA8D', '#8C8E54', '#E5B75A', '#E1655D', '#6D7A96', '#73A0CD', '#9891AE', '#4E4549', '#302E29', '#FFFFFF', '#EDE9E1', '#C3E6D5', '#EAE4B3', '#EAC0A4', '#A1AFC3', '#AED0F0', '#D2CEE0', '#DED3C6', '#D5D5D5'];
 export const EMOJIS = [
   '😀','😂','🤣','😊','😍','🤔','😅','😭','😤','🥺',
   '👍','👎','👏','🙏','💪','✌️','🤝','👋','✨','🔥',

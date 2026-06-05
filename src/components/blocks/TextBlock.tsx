@@ -92,7 +92,7 @@ function TextBlockViewer({ block }: { block: TextBlockType }) {
           <RenderedContent html={block.content} />
         </div>
         {!showFront && (
-          <div className="absolute -inset-x-4 -inset-y-3 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
+          <div className="absolute -inset-x-4 -inset-y-4 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
             <RenderedContent html={block.backContent || ''} />
           </div>
         )}
@@ -148,7 +148,7 @@ function ClozeContent({ html }: { html: string }) {
 
     const clozes = containerRef.current.querySelectorAll('[data-cloze]');
     clozes.forEach((el) => {
-      const color = (el as HTMLElement).dataset.clozeColor || '#4CAF50';
+      const color = (el as HTMLElement).dataset.clozeColor || '#8C8E54';
       const htmlEl = el as HTMLElement;
       htmlEl.style.cssText = '';
       htmlEl.className = 'cloze-hidden';

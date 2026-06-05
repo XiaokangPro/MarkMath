@@ -2,6 +2,14 @@ import React, { useState } from 'react';
 import katex from 'katex';
 import { FONT_COLORS, FONT_SIZES, EMOJIS } from '../types';
 
+const LINE_HEIGHTS = [
+  { label: '紧凑', value: '1.2' },
+  { label: '默认', value: '1.6' },
+  { label: '适中', value: '2.0' },
+  { label: '宽松', value: '2.5' },
+  { label: '超宽', value: '3.0' },
+];
+
 const FONTS = [
   { name: '默认(楷体)', value: '' },
   { name: '黑体', value: 'SimHei, "Microsoft YaHei", sans-serif' },
@@ -38,12 +46,65 @@ interface Props {
 }
 
 let savedRange: Range | null = null;
+const undoStack: { element: HTMLElement; html: string }[] = [];
+
+function getEditableAncestor(): HTMLElement | null {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  let node: Node | null = sel.anchorNode;
+  while (node) {
+    if (node instanceof HTMLElement && node.contentEditable === 'true') return node;
+    node = node.parentNode;
+  }
+  return null;
+}
+
+function pushUndo() {
+  const el = getEditableAncestor();
+  if (el) {
+    undoStack.push({ element: el, html: el.innerHTML });
+    if (undoStack.length > 50) undoStack.shift();
+  }
+}
+
+function popUndo() {
+  const entry = undoStack.pop();
+  if (entry && entry.element) {
+    entry.element.innerHTML = entry.html;
+    entry.element.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
 
 function saveSelection() {
   const sel = window.getSelection();
   if (sel && sel.rangeCount > 0) {
-    savedRange = sel.getRangeAt(0).cloneRange();
+    let node: Node | null = sel.anchorNode;
+    while (node) {
+      if (node instanceof HTMLElement && node.contentEditable === 'true') {
+        savedRange = sel.getRangeAt(0).cloneRange();
+        return;
+      }
+      node = node.parentNode;
+    }
   }
+}
+
+function updateSavedRange(node: Node) {
+  const range = document.createRange();
+  range.setStartAfter(node);
+  range.setEndAfter(node);
+  savedRange = range;
+}
+
+function isSelectionInEditable(): boolean {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return false;
+  let node: Node | null = sel.anchorNode;
+  while (node) {
+    if (node instanceof HTMLElement && node.contentEditable === 'true') return true;
+    node = node.parentNode;
+  }
+  return false;
 }
 
 function restoreSelection() {
@@ -63,10 +124,12 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
   const [showEmojis, setShowEmojis] = useState(false);
   const [showFonts, setShowFonts] = useState(false);
   const [showLatex, setShowLatex] = useState(false);
+  const [showLineHeight, setShowLineHeight] = useState(false);
   const [latexInput, setLatexInput] = useState('');
   const [customColors, setCustomColors] = useState<string[]>(loadCustomColors);
 
   const execCommand = (command: string, value?: string) => {
+    pushUndo();
     document.execCommand(command, false, value);
   };
 
@@ -78,6 +141,7 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
 
   const applyFont = (fontFamily: string) => {
     restoreSelection();
+    pushUndo();
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
       setShowFonts(false);
@@ -90,12 +154,55 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
     span.appendChild(selectedText);
     range.insertNode(span);
     selection.removeAllRanges();
+    updateSavedRange(span);
     setShowFonts(false);
+    triggerInput(span);
+  };
+
+  const applyFontSize = (size: number) => {
+    restoreSelection();
+    pushUndo();
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      setShowFontSize(false);
+      return;
+    }
+    const range = selection.getRangeAt(0);
+    const selectedText = range.extractContents();
+    const span = document.createElement('span');
+    span.style.fontSize = `${size}px`;
+    span.appendChild(selectedText);
+    range.insertNode(span);
+    selection.removeAllRanges();
+    updateSavedRange(span);
+    setShowFontSize(false);
+    triggerInput(span);
+  };
+
+  const applyLineHeight = (value: string) => {
+    restoreSelection();
+    pushUndo();
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      setShowLineHeight(false);
+      return;
+    }
+    const range = selection.getRangeAt(0);
+    const selectedText = range.extractContents();
+    const span = document.createElement('span');
+    span.style.lineHeight = value;
+    span.style.display = 'inline-block';
+    span.appendChild(selectedText);
+    range.insertNode(span);
+    selection.removeAllRanges();
+    updateSavedRange(span);
+    setShowLineHeight(false);
     triggerInput(span);
   };
 
   const applyUnderlineColor = (color: string) => {
     restoreSelection();
+    pushUndo();
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
       execCommand('underline');
@@ -110,6 +217,7 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
     span.appendChild(selectedText);
     range.insertNode(span);
     selection.removeAllRanges();
+    updateSavedRange(span);
     setShowColors(false);
     triggerInput(span);
   };
@@ -122,9 +230,13 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
 
   const insertEmoji = (emoji: string) => {
     restoreSelection();
+    if (!isSelectionInEditable()) {
+      setShowEmojis(false);
+      return;
+    }
+    pushUndo();
     const selection = window.getSelection();
-    if (!selection) return;
-    if (selection.rangeCount === 0) {
+    if (!selection || selection.rangeCount === 0) {
       setShowEmojis(false);
       return;
     }
@@ -136,6 +248,7 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
     range.setEndAfter(textNode);
     selection.removeAllRanges();
     selection.addRange(range);
+    updateSavedRange(textNode);
     setShowEmojis(false);
     triggerInput(textNode);
   };
@@ -146,6 +259,11 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
       return;
     }
     restoreSelection();
+    if (!isSelectionInEditable()) {
+      setShowLatex(false);
+      return;
+    }
+    pushUndo();
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
       setShowLatex(false);
@@ -171,6 +289,7 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
     range.setEndAfter(span);
     selection.removeAllRanges();
     selection.addRange(range);
+    updateSavedRange(span);
     setShowLatex(false);
     setLatexInput('');
     triggerInput(span);
@@ -252,18 +371,7 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
                   key={size}
                   className="block w-full text-left px-3 py-1 hover:bg-gray-100 rounded text-sm"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    restoreSelection();
-                    execCommand('fontSize', '7');
-                    const fontElements = document.querySelectorAll('font[size="7"]');
-                    fontElements.forEach((el) => {
-                      const span = document.createElement('span');
-                      span.style.fontSize = `${size}px`;
-                      span.innerHTML = el.innerHTML;
-                      el.parentNode?.replaceChild(span, el);
-                    });
-                    setShowFontSize(false);
-                  }}
+                  onClick={() => applyFontSize(size)}
                 >
                   <span style={{ fontSize: `${Math.min(size, 20)}px` }}>{size}px</span>
                 </button>
@@ -298,6 +406,29 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
                   }}
                 >
                   {font.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="relative">
+        <ToolBtn onClick={() => { saveSelection(); setShowLineHeight(!showLineHeight); }} title="行间距">
+          <span className="text-xs">行距</span>
+        </ToolBtn>
+        {showLineHeight && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setShowLineHeight(false)} />
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-20">
+              {LINE_HEIGHTS.map((lh) => (
+                <button
+                  key={lh.value}
+                  className="block w-full text-left px-3 py-1 hover:bg-gray-100 rounded text-sm whitespace-nowrap"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => applyLineHeight(lh.value)}
+                >
+                  {lh.label} ({lh.value})
                 </button>
               ))}
             </div>
@@ -396,7 +527,7 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
 
       <Divider />
 
-      <ToolBtn onClick={() => execCommand('undo')} title="撤销">
+      <ToolBtn onClick={() => popUndo()} title="撤销">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 10h13a4 4 0 0 1 0 8H7"/><polyline points="7,6 3,10 7,14"/>
         </svg>

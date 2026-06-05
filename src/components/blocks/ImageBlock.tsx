@@ -103,7 +103,7 @@ function ImageBlockViewer({ block }: { block: ImageBlockType }) {
           )}
         </div>
         {!showFront && (
-          <div className="absolute -inset-x-4 -inset-y-3 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
+          <div className="absolute -inset-x-4 -inset-y-4 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
             {block.backContent || '点击查看'}
           </div>
         )}

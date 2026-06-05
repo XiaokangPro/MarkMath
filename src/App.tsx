@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardPack } from './types';
 import { loadPacks, savePacks, generateId } from './store';
 import { PackList } from './components/CardList';
@@ -18,12 +18,17 @@ function App() {
   const [packs, setPacks] = useState<CardPack[]>([]);
   const [activePack, setActivePack] = useState<CardPack | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const initialized = useRef(false);
 
   useEffect(() => {
     setPacks(loadPacks());
   }, []);
 
   useEffect(() => {
+    if (!initialized.current) {
+      initialized.current = true;
+      return;
+    }
     savePacks(packs);
   }, [packs]);
 

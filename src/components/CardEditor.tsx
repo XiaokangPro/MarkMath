@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { Card, Block, BlockType, TextBlock } from '../types';
 import { generateId } from '../store';
 import { Toolbar } from './Toolbar';
@@ -94,14 +94,13 @@ export function CardEditor({ card, onSave }: Props) {
     if (!previewRef.current) return;
     setSaving(true);
     try {
-      const canvas = await html2canvas(previewRef.current, {
+      const dataUrl = await toPng(previewRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
+        pixelRatio: 2,
       });
       const link = document.createElement('a');
       link.download = `${card.title || '卡片'}_${Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = dataUrl;
       link.click();
     } catch (e) {
       console.error('Save image failed:', e);
@@ -161,7 +160,7 @@ export function CardEditor({ card, onSave }: Props) {
 
       <div
         ref={previewRef}
-        className={`flex-1 overflow-y-auto p-4 ${!isEditing ? 'bg-white' : ''}`}
+        className={`flex-1 overflow-y-auto px-4 py-2 ${!isEditing ? 'bg-white' : ''}`}
       >
         <DndContext
           collisionDetection={closestCenter}
