@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { useSortable } from '@dnd-kit/sortable';
-import { Block, BG_COLORS } from '../types';
+import { Block, BG_COLORS, ImageBlock as ImageBlockType } from '../types';
 import { TextBlock } from './blocks/TextBlock';
 import { ImageBlock } from './blocks/ImageBlock';
 import { AudioBlock } from './blocks/AudioBlock';
 import { ChoiceBlock } from './blocks/ChoiceBlock';
 import { LinkBlock } from './blocks/LinkBlock';
+
+const ImageCanvas = lazy(() => import('./blocks/ImageCanvas').then(m => ({ default: m.ImageCanvas })));
 
 const CUSTOM_BG_KEY = 'markmath-custom-bg-colors';
 
@@ -42,8 +45,10 @@ interface Props {
 export function BlockContainer({ block, isEditing, onUpdate, onDelete, onAddBefore, onAddAfter, onDuplicate, onPasteBlock, onFocus }: Props) {
   const [showMenu, setShowMenu] = useState(false);
   const [showColorSub, setShowColorSub] = useState(false);
+  const [showImageCanvas, setShowImageCanvas] = useState(false);
   const [customBgColors, setCustomBgColors] = useState<string[]>(loadCustomBgColors);
   const [customBgInput, setCustomBgInput] = useState('#FFFDE7');
+  const replaceInputRef = useRef<HTMLInputElement>(null);
   const {
     attributes,
     listeners,
@@ -90,6 +95,45 @@ export function BlockContainer({ block, isEditing, onUpdate, onDelete, onAddBefo
     } catch {}
     setShowMenu(false);
   };
+
+  const handleImageReplace = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || block.type !== 'image') return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      onUpdate({ ...block, dataUrl: reader.result as string, annotations: undefined, compositeUrl: undefined });
+    };
+    reader.readAsDataURL(file);
+    if (replaceInputRef.current) replaceInputRef.current.value = '';
+  };
+
+  const handleCanvasSave = (annotations: string, compositeUrl: string) => {
+    if (block.type === 'image') {
+      onUpdate({ ...block, annotations, compositeUrl });
+    }
+    setShowImageCanvas(false);
+  };
+
+  const imageMenuItems = block.type === 'image' && block.dataUrl ? [
+    {
+      label: '替换图片',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+        </svg>
+      ),
+      action: () => { replaceInputRef.current?.click(); setShowMenu(false); },
+    },
+    {
+      label: '编辑图片',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+      ),
+      action: () => { setShowImageCanvas(true); setShowMenu(false); },
+    },
+  ] : [];
 
   const menuItems = [
     {
@@ -192,7 +236,7 @@ export function BlockContainer({ block, isEditing, onUpdate, onDelete, onAddBefo
             <>
               <div className="fixed inset-0 z-30" onClick={() => { setShowMenu(false); setShowColorSub(false); }} />
               <div className="absolute left-full top-0 ml-1 z-40 bg-[#FFFDF5] rounded-xl shadow-lg py-1.5 w-[140px] border border-[#F0EBE0]">
-                {menuItems.map((item) => (
+                {[...imageMenuItems, ...menuItems].map((item) => (
                   <button
                     key={item.label}
                     className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors ${
@@ -268,6 +312,26 @@ export function BlockContainer({ block, isEditing, onUpdate, onDelete, onAddBefo
           <BlockRenderer block={block} isEditing={isEditing} onUpdate={onUpdate} onFocus={onFocus} />
         </div>
       </div>
+
+      <input
+        ref={replaceInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageReplace}
+      />
+
+      {showImageCanvas && block.type === 'image' && createPortal(
+        <Suspense fallback={null}>
+          <ImageCanvas
+            imageUrl={(block as ImageBlockType).dataUrl}
+            annotations={(block as ImageBlockType).annotations}
+            onSave={handleCanvasSave}
+            onCancel={() => setShowImageCanvas(false)}
+          />
+        </Suspense>,
+        document.body
+      )}
     </div>
   );
 }

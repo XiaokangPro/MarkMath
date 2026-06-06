@@ -16,10 +16,13 @@ export function ImageBlock({ block, isEditing, onUpdate, onFocus }: Props) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      onUpdate({ ...block, dataUrl: reader.result as string });
+      onUpdate({ ...block, dataUrl: reader.result as string, annotations: undefined, compositeUrl: undefined });
     };
     reader.readAsDataURL(file);
+    if (inputRef.current) inputRef.current.value = '';
   };
+
+  const displayUrl = block.compositeUrl || block.dataUrl;
 
   if (!block.dataUrl) {
     return (
@@ -47,7 +50,7 @@ export function ImageBlock({ block, isEditing, onUpdate, onFocus }: Props) {
   }
 
   if (!isEditing) {
-    return <ImageBlockViewer block={block} />;
+    return <ImageBlockViewer block={block} displayUrl={displayUrl} />;
   }
 
   return (
@@ -65,26 +68,18 @@ export function ImageBlock({ block, isEditing, onUpdate, onFocus }: Props) {
           />
         </div>
       )}
-      <div className="relative group/img">
-        <img
-          src={block.dataUrl}
-          alt={block.caption || ''}
-          className="max-w-full rounded-lg"
-        />
-        <div
-          className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg cursor-pointer"
-          onClick={() => inputRef.current?.click()}
-        >
-          <span className="text-white text-sm bg-black/50 px-3 py-1.5 rounded-full">替换图片</span>
-        </div>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-      </div>
+      <img
+        src={displayUrl}
+        alt={block.caption || ''}
+        className="max-w-full rounded-lg"
+      />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
       <input
         type="text"
         placeholder="图片描述（可选）"
@@ -96,7 +91,7 @@ export function ImageBlock({ block, isEditing, onUpdate, onFocus }: Props) {
   );
 }
 
-function ImageBlockViewer({ block }: { block: ImageBlockType }) {
+function ImageBlockViewer({ block, displayUrl }: { block: ImageBlockType; displayUrl: string }) {
   const [showFront, setShowFront] = useState(!block.isDoubleSided);
 
   if (block.isDoubleSided) {
@@ -107,7 +102,7 @@ function ImageBlockViewer({ block }: { block: ImageBlockType }) {
       >
         <div className={showFront ? '' : 'invisible'}>
           <img
-            src={block.dataUrl}
+            src={displayUrl}
             alt={block.caption || ''}
             className="max-w-full rounded-lg"
           />
@@ -127,7 +122,7 @@ function ImageBlockViewer({ block }: { block: ImageBlockType }) {
   return (
     <div className="w-full">
       <img
-        src={block.dataUrl}
+        src={displayUrl}
         alt={block.caption || ''}
         className="max-w-full rounded-lg"
       />

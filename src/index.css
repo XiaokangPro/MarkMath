@@ -80,3 +80,7 @@ img.emoji {
   vertical-align: -0.2em;
   margin: 0 0.05em;
 }
+
+.canvas-wrapper .canvas-container {
+  margin: 0 auto;
+}

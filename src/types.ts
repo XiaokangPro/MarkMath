@@ -17,6 +17,8 @@ export interface ImageBlock {
   bgColor?: string;
   isDoubleSided?: boolean;
   backContent?: string;
+  annotations?: string;
+  compositeUrl?: string;
 }
 
 export interface AudioBlock {
