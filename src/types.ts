@@ -5,6 +5,7 @@ export interface TextBlock {
   type: 'text';
   content: string;
   backContent?: string;
+  backColor?: string;
   isDoubleSided: boolean;
   bgColor?: string;
 }
@@ -17,6 +18,7 @@ export interface ImageBlock {
   bgColor?: string;
   isDoubleSided?: boolean;
   backContent?: string;
+  backColor?: string;
   annotations?: string;
   compositeUrl?: string;
 }

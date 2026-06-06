@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import twemoji from 'twemoji';
-import { TextBlock as TextBlockType } from '../../types';
+import { TextBlock as TextBlockType, BG_COLORS } from '../../types';
 
 interface Props {
   block: TextBlockType;
@@ -54,8 +54,21 @@ export function TextBlock({ block, isEditing, onUpdate, onFocus }: Props) {
   return (
     <div className="w-full">
       {block.isDoubleSided && (
-        <div className="double-sided-back mb-2">
-          <div className="text-xs text-green-700 font-medium mb-1">背面 (提示/问题)</div>
+        <div className="double-sided-back mb-2" style={block.backColor ? { background: block.backColor, borderLeftColor: block.backColor } : undefined}>
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-xs text-green-700 font-medium">背面 (提示/问题)</div>
+            <div className="flex items-center gap-0.5">
+              {BG_COLORS.slice(0, 12).map((c) => (
+                <button
+                  key={c}
+                  className={`w-3.5 h-3.5 rounded-sm border ${block.backColor === c || (!block.backColor && c === 'transparent') ? 'border-blue-500' : 'border-gray-300'}`}
+                  style={{ backgroundColor: c === 'transparent' ? '#EDE9E1' : c }}
+                  onClick={(e) => { e.stopPropagation(); onUpdate({ ...block, backColor: c === 'transparent' ? undefined : c }); }}
+                  title={c === 'transparent' ? '默认' : c}
+                />
+              ))}
+            </div>
+          </div>
           <div
             ref={backRef}
             contentEditable
@@ -93,7 +106,10 @@ function TextBlockViewer({ block }: { block: TextBlockType }) {
           <RenderedContent html={block.content} />
         </div>
         {!showFront && (
-          <div className="absolute -inset-x-4 -inset-y-4 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
+          <div
+            className="absolute -inset-x-4 -inset-y-4 rounded-lg flex items-center justify-center text-gray-500"
+            style={{ backgroundColor: block.backColor || '#f3f4f6' }}
+          >
             <RenderedContent html={block.backContent || ''} />
           </div>
         )}
