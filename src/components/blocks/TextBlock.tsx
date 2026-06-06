@@ -134,8 +134,8 @@ function renderLatex(container: HTMLElement) {
         throwOnError: false,
         displayMode: false,
       });
-      (el as HTMLElement).style.display = 'inline-block';
-      (el as HTMLElement).style.verticalAlign = 'middle';
+      (el as HTMLElement).style.display = 'inline';
+      (el as HTMLElement).style.verticalAlign = 'baseline';
     } catch {
       (el as HTMLElement).textContent = formula;
     }

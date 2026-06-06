@@ -127,6 +127,18 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
   const [showLineHeight, setShowLineHeight] = useState(false);
   const [latexInput, setLatexInput] = useState('');
   const [customColors, setCustomColors] = useState<string[]>(loadCustomColors);
+  const [currentFontSize, setCurrentFontSize] = useState<number | null>(null);
+
+  const detectFontSize = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) { setCurrentFontSize(null); return; }
+    const node = sel.anchorNode;
+    if (!node) { setCurrentFontSize(null); return; }
+    const el = node.nodeType === 3 ? node.parentElement : node as HTMLElement;
+    if (!el) { setCurrentFontSize(null); return; }
+    const size = Math.round(parseFloat(window.getComputedStyle(el).fontSize));
+    setCurrentFontSize(size);
+  };
 
   const execCommand = (command: string, value?: string) => {
     pushUndo();
@@ -224,6 +236,36 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
 
   const applyFontColor = (color: string) => {
     restoreSelection();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      const container = range.commonAncestorContainer;
+      const parentEl = container.nodeType === 3 ? container.parentElement : container as HTMLElement;
+      const latexEl = parentEl?.closest?.('[data-latex]') as HTMLElement | null;
+      if (latexEl) {
+        pushUndo();
+        latexEl.style.color = color;
+        triggerInput(latexEl);
+        setShowFontColors(false);
+        return;
+      }
+      const latexInRange = (range.cloneContents()).querySelectorAll('[data-latex]');
+      if (latexInRange.length > 0) {
+        pushUndo();
+        const editable = parentEl?.closest('[contenteditable]');
+        if (editable) {
+          const allLatex = editable.querySelectorAll('[data-latex]');
+          allLatex.forEach((el) => {
+            if (sel.containsNode(el, true)) {
+              (el as HTMLElement).style.color = color;
+            }
+          });
+        }
+        execCommand('foreColor', color);
+        setShowFontColors(false);
+        return;
+      }
+    }
     execCommand('foreColor', color);
     setShowFontColors(false);
   };
@@ -253,8 +295,9 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
     triggerInput(textNode);
   };
 
-  const insertLatex = () => {
-    if (!latexInput.trim()) {
+  const insertLatex = (formula?: string) => {
+    const latex = (formula || latexInput).trim();
+    if (!latex) {
       setShowLatex(false);
       return;
     }
@@ -272,17 +315,17 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
     const range = selection.getRangeAt(0);
     range.deleteContents();
     const span = document.createElement('span');
-    span.setAttribute('data-latex', latexInput);
+    span.setAttribute('data-latex', latex);
     span.contentEditable = 'false';
-    span.style.display = 'inline-block';
-    span.style.verticalAlign = 'middle';
+    span.style.display = 'inline';
+    span.style.verticalAlign = 'baseline';
     try {
-      span.innerHTML = katex.renderToString(latexInput, {
+      span.innerHTML = katex.renderToString(latex, {
         throwOnError: false,
         displayMode: false,
       });
     } catch {
-      span.textContent = latexInput;
+      span.textContent = latex;
     }
     range.insertNode(span);
     range.setStartAfter(span);
@@ -310,7 +353,44 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
 
       <Divider />
 
-      <ToolBtn onClick={() => execCommand('bold')} title="加粗">
+      <ToolBtn onClick={() => {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const container = range.commonAncestorContainer;
+          const parentEl = container.nodeType === 3 ? container.parentElement : container as HTMLElement;
+          const latexEl = parentEl?.closest?.('[data-latex]') as HTMLElement | null;
+          const toggleBold = (el: HTMLElement) => {
+            const formula = el.getAttribute('data-latex') || '';
+            const isBold = formula.startsWith('\\boldsymbol{') && formula.endsWith('}');
+            const newFormula = isBold ? formula.slice(12, -1) : `\\boldsymbol{${formula}}`;
+            el.setAttribute('data-latex', newFormula);
+            try {
+              el.innerHTML = katex.renderToString(newFormula, { throwOnError: false, displayMode: false });
+            } catch { el.textContent = newFormula; }
+          };
+          if (latexEl) {
+            pushUndo();
+            toggleBold(latexEl);
+            triggerInput(latexEl);
+            return;
+          }
+          const editable = parentEl?.closest('[contenteditable]');
+          if (editable) {
+            const allLatex = editable.querySelectorAll('[data-latex]');
+            let handled = false;
+            allLatex.forEach((el) => {
+              if (sel.containsNode(el, true)) {
+                if (!handled) pushUndo();
+                handled = true;
+                toggleBold(el as HTMLElement);
+              }
+            });
+            if (handled) { triggerInput(editable as HTMLElement); }
+          }
+        }
+        execCommand('bold');
+      }} title="加粗">
         <strong>B</strong>
       </ToolBtn>
 
@@ -359,8 +439,8 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
       </div>
 
       <div className="relative">
-        <ToolBtn onClick={() => { saveSelection(); setShowFontSize(!showFontSize); }} title="字号">
-          <span className="text-xs">字号</span>
+        <ToolBtn onClick={() => { saveSelection(); detectFontSize(); setShowFontSize(!showFontSize); }} title="字号">
+          <span className="text-xs">{currentFontSize ? `${currentFontSize}` : '字号'}</span>
         </ToolBtn>
         {showFontSize && (
           <>
@@ -461,7 +541,22 @@ export function Toolbar({ onToggleDoubleSided, isDoubleSided }: Props) {
       <Divider />
 
       <div className="relative">
-        <ToolBtn onClick={() => { saveSelection(); setShowLatex(!showLatex); }} title="LaTeX公式">
+        <ToolBtn onClick={() => {
+          saveSelection();
+          const sel = window.getSelection();
+          if (sel && !sel.isCollapsed) {
+            let text = sel.toString().trim();
+            if (text.startsWith('$') && text.endsWith('$') && text.length > 2) {
+              text = text.slice(1, -1).trim();
+              insertLatex(text);
+              return;
+            }
+            if (text) {
+              setLatexInput(text);
+            }
+          }
+          setShowLatex(!showLatex);
+        }} title="LaTeX公式">
           <span className="text-xs font-serif italic">fx</span>
         </ToolBtn>
         {showLatex && (

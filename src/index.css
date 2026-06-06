@@ -69,8 +69,12 @@ body {
 }
 
 [data-latex] {
-  display: inline-block;
-  vertical-align: middle;
+  display: inline;
+  vertical-align: baseline;
+}
+
+[data-latex] .katex {
+  font-size: 1em;
 }
 
 img.emoji {
